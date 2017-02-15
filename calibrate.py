@@ -35,8 +35,6 @@ for idx, fname in enumerate(images):
 
         # Draw and display the corners
         # cv2.drawChessboardCorners(img, (nx,ny), corners, ret)
-        #write_name = 'corners_found'+str(idx)+'.jpg'
-        #cv2.imwrite(write_name, img)
         # plt.imshow(img)
         # plt.show()
 
@@ -53,7 +51,8 @@ dist_pickle["mtx"] = mtx
 dist_pickle["dist"] = dist
 pickle.dump( dist_pickle, open( "calibration.p", "wb" ) )
 
-# Show an undistorted sample
+# Show and save an undistorted sample
 dst = cv2.undistort(img, mtx, dist, None, mtx)
+cv2.imwrite("output_images/calibrated1.jpg", dst)
 plt.imshow(dst)
 plt.show()
