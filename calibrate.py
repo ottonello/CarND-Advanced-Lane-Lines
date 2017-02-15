@@ -39,20 +39,23 @@ for idx, fname in enumerate(images):
         # plt.show()
 
 
-img = cv2.imread('camera_cal/calibration1.jpg')
-img_size = (img.shape[1], img.shape[0])
+def correct_and_save(img, output_filename, objpoints, imgpoint):
+    img_size = (img.shape[1], img.shape[0])
 
-# Do camera calibration given object points and image points
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size,None,None)
+    # Do camera calibration given object points and image points
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size,None,None)
 
-# Save the camera calibration result for later use (we won't worry about rvecs / tvecs)
-dist_pickle = {}
-dist_pickle["mtx"] = mtx
-dist_pickle["dist"] = dist
-pickle.dump( dist_pickle, open( "calibration.p", "wb" ) )
+    # Save the camera calibration result for later use (we won't worry about rvecs / tvecs)
+    dist_pickle = {}
+    dist_pickle["mtx"] = mtx
+    dist_pickle["dist"] = dist
+    pickle.dump( dist_pickle, open( "calibration.p", "wb" ) )
 
-# Show and save an undistorted sample
-dst = cv2.undistort(img, mtx, dist, None, mtx)
-cv2.imwrite("output_images/calibrated1.jpg", dst)
-plt.imshow(dst)
-plt.show()
+    # Show and save an undistorted sample
+    dst = cv2.undistort(img, mtx, dist, None, mtx)
+    cv2.imwrite(output_filename, dst)
+    # plt.imshow(dst)
+    # plt.show()
+
+correct_and_save(cv2.imread('camera_cal/calibration1.jpg'), "output_images/calibrated1.jpg", objpoints, imgpoints)
+correct_and_save(cv2.imread('test_images/test1.jpg'), "output_images/road_calibrated.jpg", objpoints, imgpoints)
