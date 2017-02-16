@@ -83,8 +83,6 @@ def threshold(image):
     combined = np.zeros_like(dir_binary)
 
     combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | s_thresh ==1] = 1
-    # gradfilter = (gradx == 1) & (grady == 1)
-    # combined[gradfilter | s_thresh == 1] = 1
 
     return combined
 
