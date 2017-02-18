@@ -106,8 +106,6 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
         plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
         plt.close()
 
-    out_img = np.dstack((img, img, img))*255
-
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
     midpoint = np.int(histogram.shape[0]/2)
@@ -177,10 +175,26 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
 
-    out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-    out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+    # print(np.shape(ploty))
+    l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
+    r_points =  np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
+
+
+
+    out_img = np.zeros_like(orig)
+
+    points_rect = np.concatenate((r_points,l_points[::-1]),0)
+
+    out_img = cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
+    out_img = cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
+    out_img = cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
+
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
 
     # if debug:
+    #     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+    #     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
         # plt.imshow(out_img)
         # plt.plot(left_fitx, ploty, color='yellow')
         # plt.plot(right_fitx, ploty, color='yellow')
@@ -190,10 +204,12 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
         # plt.close()
 
         # plt.show()
+
     out_img = perspective_transform(out_img, dst, src)
-    out_img = cv2.addWeighted(orig, 0.7, out_img, 0.3, 0.0, dtype=0)
+    out_img = cv2.addWeighted(orig, .5, out_img, .5, 0.0, dtype=0)
+
     if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_6_lines.jpg"), out_img, cmap='gray')
+        mpimg.imsave(os.path.join(output_files, base_filename + "_8_output.jpg"), out_img, cmap='gray')
 
     return out_img
 
