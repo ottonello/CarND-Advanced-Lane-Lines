@@ -12,8 +12,12 @@ dist_pickle = pickle.load(open("calibration.p", "rb"))
 mtx = dist_pickle["mtx"]
 dist = dist_pickle["dist"]
 
+prev_lfit=None
+prev_rfit=None
 def process_image(image):
-    return util.pipeline(image, mtx, dist, src, dst, "", debug=False)
+    global prev_rfit, prev_lfit
+    img, prev_lfit, prev_rfit = util.pipeline(image, mtx, dist, src, dst, "", prev_lfit=prev_lfit, prev_rfit=prev_rfit, debug=False)
+    return img
 
 output_video = "solution_video.mp4"
 clip1 = VideoFileClip("project_video.mp4")
