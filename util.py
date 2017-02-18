@@ -78,33 +78,7 @@ def get_histogram(img):
     histogram = np.sum(img[img.shape[0]/2:,:], axis=0)
     return histogram
 
-
-# Takes RGB image
-def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_images', debug=False):
-    if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_1_orig.jpg"), orig)
-
-    img = cal_undistort(orig, mtx, dist)
-
-    if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_2_undistorted.jpg"), img)
-
-    img = threshold(img)
-
-    if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_3_thresholded.jpg"), img, cmap='gray')
-
-    img = perspective_transform(img, src, dst)
-
-    if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_4_perspective.jpg"), img, cmap='gray')
-
-    histogram = get_histogram(img)
-
-    if debug:
-        plt.plot(histogram)
-        plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
-        plt.close()
+def find_lane(img, histogram):
 
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
@@ -142,8 +116,6 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
         win_xright_low = rightx_current - margin
         win_xright_high = rightx_current + margin
         # Draw the windows on the visualization image
-        # cv2.rectangle(out_img,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
-        # cv2.rectangle(out_img,(win_xright_low,win_y_low),(win_xright_high,win_y_high),(0,255,0), 2)
         # Identify the nonzero pixels in x and y within the window
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
         good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
@@ -178,13 +150,40 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
     # print(np.shape(ploty))
     l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
     r_points =  np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
+    return l_points, r_points
 
 
+# Takes RGB image
+def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_images', debug=False):
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_1_orig.jpg"), orig)
+
+    img = cal_undistort(orig, mtx, dist)
+
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_2_undistorted.jpg"), img)
+
+    img = threshold(img)
+
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_3_thresholded.jpg"), img, cmap='gray')
+
+    img = perspective_transform(img, src, dst)
+
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_4_perspective.jpg"), img, cmap='gray')
+
+    histogram = get_histogram(img)
+
+    if debug:
+        plt.plot(histogram)
+        plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
+        plt.close()
+
+    l_points, r_points = find_lane(img, histogram)
 
     out_img = np.zeros_like(orig)
-
     points_rect = np.concatenate((r_points,l_points[::-1]),0)
-
     out_img = cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
     out_img = cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
     out_img = cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
@@ -192,19 +191,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,  output_files='output_ima
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
 
-    # if debug:
-    #     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-    #     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
-        # plt.imshow(out_img)
-        # plt.plot(left_fitx, ploty, color='yellow')
-        # plt.plot(right_fitx, ploty, color='yellow')
-        # plt.xlim(0, 1280)
-        # plt.ylim(720, 0)
-        # plt.savefig(os.path.join(output_files, base_filename + "_6_lines.jpg"))
-        # plt.close()
-
-        # plt.show()
-
+    # Draw lane into original image
     out_img = perspective_transform(out_img, dst, src)
     out_img = cv2.addWeighted(orig, .5, out_img, .5, 0.0, dtype=0)
 
