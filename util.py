@@ -62,7 +62,7 @@ def h_channel_threshold(image, thresh=(90, 255)):
 def threshold(image):
     ksize=3
     # s_thresh = s_channel_threshold(image, thresh=(100, 255))
-    s_thresh = s_channel_threshold(image, thresh=(50, 255))
+    s_thresh = s_channel_threshold(image, thresh=(100, 255))
     h_thresh = h_channel_threshold(image, thresh=(50, 200))
 
     gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(15, 210))
@@ -71,7 +71,7 @@ def threshold(image):
     mag_binary = mag_thresh(image, sobel_kernel=9, mag_thresh=(50, 200))
     combined = np.zeros_like(dir_binary)
 
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh == 1) & (h_thresh == 0))]  = 1
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh == 1) )]  = 1
     # combined[((s_thresh == 1) & (h_thresh == 0)) ] = 1
     #
 

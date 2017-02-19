@@ -18,7 +18,7 @@ source_files = 'test2'
 
 # Perspective warping source and destination points
 src = np.float32([[595,451], [680,451], [233,720],[1067,720]])
-dst = np.float32([[300,0],   [900,0],  [300,720],[900,720]])
+dst = np.float32([[300,0],   [980,0],  [300,720],[980,720]])
 
 for file in glob.glob(os.path.join(source_files, "*.png")):
     base_filename = os.path.basename(file)
