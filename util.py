@@ -142,16 +142,6 @@ def find_lane(img, histogram, left_fit = None, right_fit = None):
         # Concatenate the arrays of indices
         left_lane_inds = np.concatenate(left_lane_inds)
         right_lane_inds = np.concatenate(right_lane_inds)
-
-        # Extract left and right line pixel positions
-        leftx = nonzerox[left_lane_inds]
-        lefty = nonzeroy[left_lane_inds]
-        rightx = nonzerox[right_lane_inds]
-        righty = nonzeroy[right_lane_inds]
-
-        # Fit a second order polynomial to each
-        left_fit = np.polyfit(lefty, leftx, 2)
-        right_fit = np.polyfit(righty, rightx, 2)
     else:
         nonzero = img.nonzero()
         nonzeroy = np.array(nonzero[0])
@@ -160,14 +150,16 @@ def find_lane(img, histogram, left_fit = None, right_fit = None):
         left_lane_inds = ((nonzerox > (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy + left_fit[2] - margin)) & (nonzerox < (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy + left_fit[2] + margin)))
         right_lane_inds = ((nonzerox > (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy + right_fit[2] - margin)) & (nonzerox < (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy + right_fit[2] + margin)))
 
-        # Again, extract left and right line pixel positions
-        leftx = nonzerox[left_lane_inds]
-        lefty = nonzeroy[left_lane_inds]
-        rightx = nonzerox[right_lane_inds]
-        righty = nonzeroy[right_lane_inds]
-        # Fit a second order polynomial to each
-        left_fit = np.polyfit(lefty, leftx, 2)
-        right_fit = np.polyfit(righty, rightx, 2)
+    # Again, extract left and right line pixel positions
+    leftx = nonzerox[left_lane_inds]
+    lefty = nonzeroy[left_lane_inds]
+    rightx = nonzerox[right_lane_inds]
+    righty = nonzeroy[right_lane_inds]
+    # Fit a second order polynomial to each
+    left_fit = np.polyfit(lefty, leftx, 2)
+    right_fit = np.polyfit(righty, rightx, 2)
+
+
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0]-1, img.shape[0] )
@@ -177,7 +169,23 @@ def find_lane(img, histogram, left_fit = None, right_fit = None):
     # print(np.shape(ploty))
     l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
     r_points =  np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
-    return l_points, r_points, left_fit, right_fit
+
+    y_eval = np.max(ploty)
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+    # Fit new polynomials to x,y in world space
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+    # Now our radius of curvature is in meters
+    # print(left_curverad, 'm', right_curverad, 'm')
+    # Example values: 632.1 m    626.2 m
+
+    return l_points, r_points, left_fit, right_fit, left_curverad, right_curverad
 
 
 # Takes RGB image
@@ -207,13 +215,13 @@ def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit = None, prev_rf
         plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
         plt.close()
 
-    l_points, r_points, prev_lfit, prev_rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
+    l_points, r_points, prev_lfit, prev_rfit, left_curverad, right_curverad = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
 
     out_img = np.zeros_like(orig)
     points_rect = np.concatenate((r_points,l_points[::-1]),0)
-    out_img = cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
-    out_img = cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
-    out_img = cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
+    cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
+    cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
+    cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
 
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
@@ -221,6 +229,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit = None, prev_rf
     # Draw lane into original image
     out_img = perspective_transform(out_img, dst, src)
     out_img = cv2.addWeighted(orig, .5, out_img, .5, 0.0, dtype=0)
+    cv2.putText(out_img, "Radius: %.2f" % ((left_curverad + right_curverad) /2), (30,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
 
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_8_output.jpg"), out_img, cmap='gray')
