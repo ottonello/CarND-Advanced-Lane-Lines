@@ -51,18 +51,29 @@ def s_channel_threshold(image, thresh=(90, 255)):
     binary[(S > thresh[0]) & (S <= thresh[1])] = 1
     return binary
 
+def h_channel_threshold(image, thresh=(90, 255)):
+    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+    S = hls[:, :, 0]
+    binary = np.zeros_like(S)
+    binary[(S > thresh[0]) & (S <= thresh[1])] = 1
+    return binary
+
 
 def threshold(image):
     ksize=3
-    s_thresh = s_channel_threshold(image, thresh=(170, 255))
+    # s_thresh = s_channel_threshold(image, thresh=(100, 255))
+    s_thresh = s_channel_threshold(image, thresh=(50, 255))
+    h_thresh = h_channel_threshold(image, thresh=(50, 200))
 
-    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(40, 120))
-    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(40, 120))
+    gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(15, 210))
+    grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(15, 210))
     dir_binary = dir_threshold(image,  sobel_kernel=15, thresh=(0.7, 1.2))
     mag_binary = mag_thresh(image, sobel_kernel=9, mag_thresh=(50, 200))
     combined = np.zeros_like(dir_binary)
 
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | s_thresh ==1] = 1
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh == 1) & (h_thresh == 0))]  = 1
+    # combined[((s_thresh == 1) & (h_thresh == 0)) ] = 1
+    #
 
     return combined
 
