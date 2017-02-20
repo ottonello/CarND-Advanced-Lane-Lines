@@ -161,31 +161,7 @@ def find_lane(img, histogram, left_fit = None, right_fit = None):
 
 
 
-    # Generate x and y values for plotting
-    ploty = np.linspace(0, img.shape[0]-1, img.shape[0] )
-    left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-    right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
-
-    # print(np.shape(ploty))
-    l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
-    r_points =  np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
-
-    y_eval = np.max(ploty)
-    # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30/720 # meters per pixel in y dimension
-    xm_per_pix = 3.7/700 # meters per pixel in x dimension
-
-    # Fit new polynomials to x,y in world space
-    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
-    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
-    # Calculate the new radii of curvature
-    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
-    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
-    # Now our radius of curvature is in meters
-    # print(left_curverad, 'm', right_curverad, 'm')
-    # Example values: 632.1 m    626.2 m
-
-    return l_points, r_points, left_fit, right_fit, left_curverad, right_curverad
+    return left_fit, right_fit
 
 
 # Takes RGB image
@@ -215,7 +191,30 @@ def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit = None, prev_rf
         plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
         plt.close()
 
-    l_points, r_points, prev_lfit, prev_rfit, left_curverad, right_curverad = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
+    lfit, rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
+
+    # Generate x and y values for plotting
+    ploty = np.linspace(0, img.shape[0]-1, img.shape[0] )
+    left_fitx = lfit[0]*ploty**2 + lfit[1]*ploty + lfit[2]
+    right_fitx = rfit[0]*ploty**2 + rfit[1]*ploty + rfit[2]
+
+    # print(np.shape(ploty))
+    l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
+    r_points =  np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
+
+    y_eval = np.max(ploty)
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+
+    # Fit new polynomials to x,y in world space
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+    # Example values: 632.1 m    626.2 m
+
 
     out_img = np.zeros_like(orig)
     points_rect = np.concatenate((r_points,l_points[::-1]),0)
