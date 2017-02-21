@@ -58,7 +58,7 @@ def hls_s_channel_threshold(image, thresh=(90, 255)):
 
 def threshold(image):
     ksize = 3
-    s_thresh = hls_s_channel_threshold(image, thresh=(70, 255))
+    s_thresh = hls_s_channel_threshold(image, thresh=(100, 255))
 
     gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(15, 210))
     grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(15, 210))
