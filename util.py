@@ -48,17 +48,9 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi / 2)):
     return binary_output
 
 
-def s_channel_threshold(image, thresh=(90, 255)):
-    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-    S = hls[:, :, 2]
-    binary = np.zeros_like(S)
-    binary[(S > thresh[0]) & (S <= thresh[1])] = 1
-    return binary
-
-
-def h_channel_threshold(image, thresh=(90, 255)):
-    hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-    S = hls[:, :, 0]
+def hls_s_channel_threshold(image, thresh=(90, 255)):
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
+    S = hsv[:, :, 2]
     binary = np.zeros_like(S)
     binary[(S > thresh[0]) & (S <= thresh[1])] = 1
     return binary
@@ -66,9 +58,7 @@ def h_channel_threshold(image, thresh=(90, 255)):
 
 def threshold(image):
     ksize = 3
-    # s_thresh = s_channel_threshold(image, thresh=(100, 255))
-    s_thresh = s_channel_threshold(image, thresh=(100, 255))
-    h_thresh = h_channel_threshold(image, thresh=(50, 200))
+    s_thresh = hls_s_channel_threshold(image, thresh=(70, 255))
 
     gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(15, 210))
     grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(15, 210))
@@ -76,9 +66,7 @@ def threshold(image):
     mag_binary = mag_thresh(image, sobel_kernel=9, mag_thresh=(50, 200))
     combined = np.zeros_like(dir_binary)
 
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh == 1))] = 1
-    # combined[((s_thresh == 1) & (h_thresh == 0)) ] = 1
-    #
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh==1))] = 1
 
     return combined
 
@@ -156,11 +144,11 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
         nonzerox = np.array(nonzero[1])
         margin = 100
         left_lane_inds = (
-        (nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - margin)) & (
-        nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + margin)))
+            (nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - margin)) & (
+                nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + margin)))
         right_lane_inds = (
-        (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - margin)) & (
-        nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + margin)))
+            (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - margin)) & (
+                nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + margin)))
 
     # Again, extract left and right line pixel positions
     leftx = nonzerox[left_lane_inds]
@@ -233,8 +221,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
     y_eval = np.max(ploty)
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    dx_pixels = (dst[1][0] - dst[0][0])
-    xm_per_pix = 3.7 / dx_pixels # meters per pixel in x dimension
+    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * ym_per_pix, left_fitx * xm_per_pix, 2)
