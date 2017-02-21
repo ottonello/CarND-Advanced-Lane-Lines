@@ -14,12 +14,14 @@ dist = dist_pickle["dist"]
 
 prev_lfit=None
 prev_rfit=None
+l_acc=None
+r_acc=None
 def process_image(image):
-    global prev_rfit, prev_lfit
-    img, prev_lfit, prev_rfit = util.pipeline(image, mtx, dist, src, dst, "", prev_lfit=prev_lfit, prev_rfit=prev_rfit, debug=False)
+    global prev_rfit, prev_lfit, l_acc, r_acc
+    img, prev_lfit, prev_rfit, l_acc, r_acc = util.pipeline(image, mtx, dist, src, dst, "", prev_lfit=prev_lfit, prev_rfit=prev_rfit, l_acc=l_acc, r_acc=r_acc, debug=False)
     return img
 
-output_video = "project_video.mp4"
-clip1 = VideoFileClip("solution_video.mp4")
+output_video = "solution_video.mp4"
+clip1 = VideoFileClip("project_video.mp4")
 output_clip= clip1.fl_image(process_image)
 output_clip.write_videofile(output_video, audio=False)
