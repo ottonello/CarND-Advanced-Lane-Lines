@@ -5,6 +5,7 @@ import numpy as np
 import os
 import collections
 
+AVG_FRAMES_LEN = 10
 
 def cal_undistort(img, mtx, dist):
     undist = cv2.undistort(img, mtx, dist, None, mtx)
@@ -194,9 +195,9 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
     lfit, rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
 
     if l_acc == None:
-        l_acc = collections.deque(maxlen=10)
+        l_acc = collections.deque(maxlen=AVG_FRAMES_LEN)
     if r_acc == None:
-        r_acc = collections.deque(maxlen=10)
+        r_acc = collections.deque(maxlen=AVG_FRAMES_LEN)
 
     l_acc.append(lfit)
     r_acc.append(rfit)
