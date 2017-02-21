@@ -180,6 +180,19 @@ def dist_from_center(left_fitx, right_fitx):
     center_x = left_x + ((right_x - left_x) /2)
     return ((IMG_WIDTH/2) - center_x) * XM_PER_PX
 
+def get_curverad(ploty, left_fitx, right_fitx):
+    y_eval = np.max(ploty)
+
+    # Fit new polynomials to x,y in world space
+    left_fit_cr = np.polyfit(ploty * YM_PER_PX, left_fitx * XM_PER_PX, 2)
+    right_fit_cr = np.polyfit(ploty * YM_PER_PX, right_fitx * XM_PER_PX, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PX + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PX + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * right_fit_cr[0])
+    return (left_curverad + right_curverad) / 2
+
 
 # Takes RGB image
 def pipeline(input_image, mtx, dist, src, dst, base_filename,
@@ -242,29 +255,16 @@ def pipeline(input_image, mtx, dist, src, dst, base_filename,
     l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
     r_points = np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
 
-    y_eval = np.max(ploty)
-
-    dist_x = dist_from_center(left_fitx, right_fitx)
-
-    # Fit new polynomials to x,y in world space
-    left_fit_cr = np.polyfit(ploty * YM_PER_PX, left_fitx * XM_PER_PX, 2)
-    right_fit_cr = np.polyfit(ploty * YM_PER_PX, right_fitx * XM_PER_PX, 2)
-    # Calculate the new radii of curvature
-    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PX + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-        2 * left_fit_cr[0])
-    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PX + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-        2 * right_fit_cr[0])
-    # Now our radius of curvature is in meters
-    # print(left_curverad, 'm', right_curverad, 'm')
-    # Example values: 632.1 m    626.2 m
-
-
-
     out_img = np.zeros_like(input_image)
     points_rect = np.concatenate((r_points, l_points[::-1]), 0)
     cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
     cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
     cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
+
+    # Distance from center
+    dist_x = dist_from_center(left_fitx, right_fitx)
+    # Radius of curvature
+    curverad = get_curverad(ploty, left_fitx, right_fitx)
 
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
@@ -272,7 +272,7 @@ def pipeline(input_image, mtx, dist, src, dst, base_filename,
     # Draw lane into original image
     out_img = perspective_transform(out_img, dst, src)
     out_img = cv2.addWeighted(input_image, .5, out_img, .5, 0.0, dtype=0)
-    cv2.putText(out_img, "Radius: %.2fm" % ((left_curverad + right_curverad) / 2), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
+    cv2.putText(out_img, "Radius: %.2fm" % curverad, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
     cv2.putText(out_img, "Dist. from center: %.2fm" % (dist_x), (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
 
     if debug:
