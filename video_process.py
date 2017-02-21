@@ -21,7 +21,7 @@ def process_image(image):
     img, prev_lfit, prev_rfit, l_acc, r_acc = util.pipeline(image, mtx, dist, src, dst, "", prev_lfit=prev_lfit, prev_rfit=prev_rfit, l_acc=l_acc, r_acc=r_acc, debug=False)
     return img
 
-output_video = "solution_video.mp4"
-clip1 = VideoFileClip("project_video.mp4")
+output_video = "challenge_solution.mp4"
+clip1 = VideoFileClip("challenge_video.mp4")
 output_clip= clip1.fl_image(process_image)
 output_clip.write_videofile(output_video, audio=False)

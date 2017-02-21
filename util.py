@@ -227,7 +227,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
     left_x = left_fitx[-1]
     right_x = right_fitx[-1]
     center_x = left_x + ((right_x - left_x) /2)
-    dist_x = ((720/2) - center_x) * XM_PER_PX
+    dist_x = ((1280/2) - center_x) * XM_PER_PX
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * YM_PER_PX, left_fitx * XM_PER_PX, 2)
