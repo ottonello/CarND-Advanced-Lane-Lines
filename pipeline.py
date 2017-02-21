@@ -13,12 +13,14 @@ YM_PER_PX = 30 / IMG_HEIGHT  # meters per pixel in y dimension
 XM_PER_PX = 3.7 / LANE_WIDTH_PX  # meters per pixel in x dimension
 
 WINDOW_HEIGHT = 80 # Height of sliding window used to detect line
+# Set the width of the windows +/- margin
+WINDOW_MARGIN = 100
+# Set minimum number of pixels found to recenter window
+MIN_PIX_WINDOW = 50
 N_WINDOWS = int(IMG_HEIGHT / WINDOW_HEIGHT)
 
 def cal_undistort(img, mtx, dist):
-    undist = cv2.undistort(img, mtx, dist, None, mtx)
-
-    return undist
+    return cv2.undistort(img, mtx, dist, None, mtx)
 
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -108,10 +110,7 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
         # Current positions to be updated for each window
         leftx_current = leftx_base
         rightx_current = rightx_base
-        # Set the width of the windows +/- margin
-        margin = 100
-        # Set minimum number of pixels found to recenter window
-        minpix = 50
+
         # Create empty lists to receive left and right lane pixel indices
         left_lane_inds = []
         right_lane_inds = []
@@ -121,10 +120,10 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = img.shape[0] - (window + 1) * window_height
             win_y_high = img.shape[0] - window * window_height
-            win_xleft_low = leftx_current - margin
-            win_xleft_high = leftx_current + margin
-            win_xright_low = rightx_current - margin
-            win_xright_high = rightx_current + margin
+            win_xleft_low = leftx_current - WINDOW_MARGIN
+            win_xleft_high = leftx_current + WINDOW_MARGIN
+            win_xright_low = rightx_current - WINDOW_MARGIN
+            win_xright_high = rightx_current + WINDOW_MARGIN
             # Draw the windows on the visualization image
             # Identify the nonzero pixels in x and y within the window
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (
@@ -135,9 +134,9 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
             # If you found > minpix pixels, recenter next window on their mean position
-            if len(good_left_inds) > minpix:
+            if len(good_left_inds) > MIN_PIX_WINDOW:
                 leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
-            if len(good_right_inds) > minpix:
+            if len(good_right_inds) > MIN_PIX_WINDOW:
                 rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
         # Concatenate the arrays of indices
@@ -147,13 +146,12 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
         nonzero = img.nonzero()
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
-        margin = 100
         left_lane_inds = (
-            (nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - margin)) & (
-                nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + margin)))
+            (nonzerox > (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] - WINDOW_MARGIN)) & (
+                nonzerox < (left_fit[0] * (nonzeroy ** 2) + left_fit[1] * nonzeroy + left_fit[2] + WINDOW_MARGIN)))
         right_lane_inds = (
-            (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - margin)) & (
-                nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + margin)))
+            (nonzerox > (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] - WINDOW_MARGIN)) & (
+                nonzerox < (right_fit[0] * (nonzeroy ** 2) + right_fit[1] * nonzeroy + right_fit[2] + WINDOW_MARGIN)))
 
     # Again, extract left and right line pixel positions
     leftx = nonzerox[left_lane_inds]
@@ -181,6 +179,9 @@ def dist_from_center(left_fitx, right_fitx):
     return ((IMG_WIDTH/2) - center_x) * XM_PER_PX
 
 def get_curverad(ploty, left_fitx, right_fitx):
+    """
+    Calculate the average curvature radius from the detected fitting parameters of left & right curves.
+    """
     y_eval = np.max(ploty)
 
     # Fit new polynomials to x,y in world space
@@ -194,12 +195,28 @@ def get_curverad(ploty, left_fitx, right_fitx):
     return (left_curverad + right_curverad) / 2
 
 
-# Takes RGB image
+def average_last_frames(lfit, rfit, l_acc, r_acc):
+
+    if l_acc is not None and r_acc is not None:
+        l_acc.append(lfit)
+        r_acc.append(rfit)
+        lfit = np.array(np.sum(l_acc, 0)) / len(l_acc)
+        rfit = np.array(np.sum(r_acc, 0)) / len(r_acc)
+    return lfit, rfit
+
+
 def pipeline(input_image, mtx, dist, src, dst, base_filename,
              prev_lfit=None, prev_rfit=None,
              l_acc=None, r_acc=None,
              output_files='output_images', debug=False):
     """
+    Process an image, perform
+    - Camera distortion correction
+    - Thresholding
+    - Perspective transformation
+    - Lines detection
+    - Averaging
+    - Plotting of results
     :param input_image: The image to process
     :param mtx: The camera matrix(as returned, i.e. from cv2.calibrateCamera)
     :param dist: The camera distortion coefficient(as returned, i.e. from cv2.calibrateCamera)
@@ -239,37 +256,27 @@ def pipeline(input_image, mtx, dist, src, dst, base_filename,
         plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
         plt.close()
 
+    # Perform the lane finding algorithm from the thresholded image
     lfit, rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
 
-    if l_acc is not None and r_acc is not None:
-        l_acc.append(lfit)
-        r_acc.append(rfit)
-        lfit = np.array(np.sum(l_acc, 0)) / len(l_acc)
-        rfit = np.array(np.sum(r_acc, 0)) / len(r_acc)
+    # Average this frame with the ones in the accumulator
+    lfit, rfit = average_last_frames(lfit, rfit, l_acc, r_acc)
 
     # Generate x and y values for plotting
-    ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-    left_fitx = lfit[0] * ploty ** 2 + lfit[1] * ploty + lfit[2]
-    right_fitx = rfit[0] * ploty ** 2 + rfit[1] * ploty + rfit[2]
+    left_fitx, ploty, right_fitx = generate_plot(img, lfit, rfit)
 
-    l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
-    r_points = np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
+    # Plot detected lane into the output image(should be perspective transformed later)
+    out_img = plot_lane(input_image, left_fitx, ploty, right_fitx)
 
-    out_img = np.zeros_like(input_image)
-    points_rect = np.concatenate((r_points, l_points[::-1]), 0)
-    cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
-    cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
-    cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
+    if debug:
+        mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
 
     # Distance from center
     dist_x = dist_from_center(left_fitx, right_fitx)
     # Radius of curvature
     curverad = get_curverad(ploty, left_fitx, right_fitx)
 
-    if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_7_detected_lane.jpg"), out_img, cmap='gray')
-
-    # Draw lane into original image
+    # Draw lane into original image, firs do inverse perspective tranformation
     out_img = perspective_transform(out_img, dst, src)
     out_img = cv2.addWeighted(input_image, .5, out_img, .5, 0.0, dtype=0)
     cv2.putText(out_img, "Radius: %.2fm" % curverad, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
@@ -279,3 +286,21 @@ def pipeline(input_image, mtx, dist, src, dst, base_filename,
         mpimg.imsave(os.path.join(output_files, base_filename + "_8_output.jpg"), out_img, cmap='gray')
 
     return out_img, lfit, rfit, l_acc, r_acc
+
+
+def generate_plot(img, lfit, rfit):
+    ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
+    left_fitx = lfit[0] * ploty ** 2 + lfit[1] * ploty + lfit[2]
+    right_fitx = rfit[0] * ploty ** 2 + rfit[1] * ploty + rfit[2]
+    return left_fitx, ploty, right_fitx
+
+
+def plot_lane(input_image, left_fitx, ploty, right_fitx):
+    l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
+    r_points = np.squeeze(np.array(np.dstack((right_fitx, ploty)), dtype='int32'))
+    out_img = np.zeros_like(input_image)
+    points_rect = np.concatenate((r_points, l_points[::-1]), 0)
+    cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
+    cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
+    cv2.polylines(out_img, [r_points], False, (0, 0, 255), 15)
+    return out_img
