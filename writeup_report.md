@@ -131,9 +131,16 @@ Warped sample:
 
 ####4. Lane detection and polynomial fitting
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+The first step for finding the lines was to get a histogram of the frequency of pixels in the lower half of the image.
+This is used for finding the candidate x,y points where we will assume the center of the lines will be located.
+Calculating this histogram is done in lines 91 to 93 in `pipeline.py`, and if we plot the results we will get something
+like the following plot:
 
 ![alt text][image7]
+
+After this, a sliding window search is performed in the left and right halves of the image.
+
+![alt text][image8]
 
 ####5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
