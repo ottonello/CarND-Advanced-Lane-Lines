@@ -3,18 +3,22 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import collections
 
-AVG_FRAMES_LEN = 10
 # Define conversions in x and y from pixels space to meters
-YM_PER_PX = 30 / 720  # meters per pixel in y dimension
-XM_PER_PX = 3.7 / 640  # meters per pixel in x dimension
+IMG_WIDTH = 1280
+IMG_HEIGHT = 720
+
+LANE_WIDTH_PX = 640
+YM_PER_PX = 30 / IMG_HEIGHT  # meters per pixel in y dimension
+XM_PER_PX = 3.7 / LANE_WIDTH_PX  # meters per pixel in x dimension
+
+WINDOW_HEIGHT = 80 # Height of sliding window used to detect line
+N_WINDOWS = int(IMG_HEIGHT / WINDOW_HEIGHT)
 
 def cal_undistort(img, mtx, dist):
     undist = cv2.undistort(img, mtx, dist, None, mtx)
 
     return undist
-
 
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -95,11 +99,8 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        # Choose the number of sliding windows
-        # 720 / 9 = 80
-        nwindows = 9
         # Set height of windows
-        window_height = np.int(img.shape[0] / nwindows)
+        window_height = np.int(img.shape[0] / N_WINDOWS)
         # Identify the x and y positions of all nonzero pixels in the image
         nonzero = img.nonzero()
         nonzeroy = np.array(nonzero[0])
@@ -116,7 +117,7 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
         right_lane_inds = []
 
         # Step through the windows one by one
-        for window in range(nwindows):
+        for window in range(N_WINDOWS):
             # Identify window boundaries in x and y (and right and left)
             win_y_low = img.shape[0] - (window + 1) * window_height
             win_y_high = img.shape[0] - window * window_height
@@ -165,15 +166,45 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
 
     return left_fit, right_fit
 
+def dist_from_center(left_fitx, right_fitx):
+    """
+    Calculate distance in meters from center of lane,
+    :param left_fitx:
+    :param right_fitx:
+    :return:
+    """
+    # Calculate distance from center
+    # x position of left line at y = 720
+    left_x = left_fitx[-1]
+    right_x = right_fitx[-1]
+    center_x = left_x + ((right_x - left_x) /2)
+    return ((IMG_WIDTH/2) - center_x) * XM_PER_PX
+
 
 # Takes RGB image
-def pipeline(orig, mtx, dist, src, dst, base_filename,
-             prev_lfit=None, prev_rfit=None, l_acc=None, r_acc=None,
+def pipeline(input_image, mtx, dist, src, dst, base_filename,
+             prev_lfit=None, prev_rfit=None,
+             l_acc=None, r_acc=None,
              output_files='output_images', debug=False):
+    """
+    :param input_image: The image to process
+    :param mtx: The camera matrix(as returned, i.e. from cv2.calibrateCamera)
+    :param dist: The camera distortion coefficient(as returned, i.e. from cv2.calibrateCamera)
+    :param src: The source points for the perspective transformation.
+    :param dst: The destination points for the perspective transformation.
+    :param prev_lfit: Detected fitting parameters from previous frame, if present will be used as a tip to find the lines quicker.
+    :param prev_rfit: Detected fitting parameters from previous frame, if present will be used as a tip to find the lines quicker.
+    :param l_acc: Accumulator used to average left line, can be of any size.
+    :param r_acc: Accumulator used to average left line, can be of any size.
+    :param base_filename: Use together with debug to save intermediate steps in the pipeline.
+    :param output_files: Output folder for debugging images.
+    :param debug: Set to true to save intermediate steps in the pipeline.
+    :return: The processed image, plus the modified accumulators and fitting parameters for this frame.
+    """
     if debug:
-        mpimg.imsave(os.path.join(output_files, base_filename + "_1_orig.jpg"), orig)
+        mpimg.imsave(os.path.join(output_files, base_filename + "_1_orig.jpg"), input_image)
 
-    img = cal_undistort(orig, mtx, dist)
+    img = cal_undistort(input_image, mtx, dist)
 
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_2_undistorted.jpg"), img)
@@ -197,21 +228,11 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
 
     lfit, rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
 
-    if l_acc == None:
-        l_acc = collections.deque(maxlen=AVG_FRAMES_LEN)
-    if r_acc == None:
-        r_acc = collections.deque(maxlen=AVG_FRAMES_LEN)
-
-    l_acc.append(lfit)
-    r_acc.append(rfit)
-
-    # print(np.shape(lfit))
-    # print(np.shape(r_acc))
-    # print(np.shape(np.sum(l_acc, 0)))
-    # print(l_acc)
-    lfit = np.array(np.sum(l_acc, 0)) / len(l_acc)
-    rfit = np.array(np.sum(r_acc, 0)) / len(r_acc)
-    # print(lfit)
+    if l_acc is not None and r_acc is not None:
+        l_acc.append(lfit)
+        r_acc.append(rfit)
+        lfit = np.array(np.sum(l_acc, 0)) / len(l_acc)
+        rfit = np.array(np.sum(r_acc, 0)) / len(r_acc)
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
@@ -223,11 +244,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
 
     y_eval = np.max(ploty)
 
-    # x position of left line at y = 720
-    left_x = left_fitx[-1]
-    right_x = right_fitx[-1]
-    center_x = left_x + ((right_x - left_x) /2)
-    dist_x = ((1280/2) - center_x) * XM_PER_PX
+    dist_x = dist_from_center(left_fitx, right_fitx)
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * YM_PER_PX, left_fitx * XM_PER_PX, 2)
@@ -243,7 +260,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
 
 
 
-    out_img = np.zeros_like(orig)
+    out_img = np.zeros_like(input_image)
     points_rect = np.concatenate((r_points, l_points[::-1]), 0)
     cv2.fillPoly(out_img, [points_rect], (0, 255, 0))
     cv2.polylines(out_img, [l_points], False, (255, 0, 0), 15)
@@ -254,7 +271,7 @@ def pipeline(orig, mtx, dist, src, dst, base_filename,
 
     # Draw lane into original image
     out_img = perspective_transform(out_img, dst, src)
-    out_img = cv2.addWeighted(orig, .5, out_img, .5, 0.0, dtype=0)
+    out_img = cv2.addWeighted(input_image, .5, out_img, .5, 0.0, dtype=0)
     cv2.putText(out_img, "Radius: %.2fm" % ((left_curverad + right_curverad) / 2), (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
     cv2.putText(out_img, "Dist. from center: %.2fm" % (dist_x), (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
 
