@@ -1,8 +1,9 @@
 import cv2
-import numpy as np
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
+import numpy as np
 import os
+import collections
 
 
 def cal_undistort(img, mtx, dist):
@@ -174,8 +175,8 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
 
 
 # Takes RGB image
-def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit=None, prev_rfit=None, output_files='output_images',
-             debug=False):
+def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit=None, prev_rfit=None, l_acc=None, r_acc=None,
+             output_files='output_images', debug=False):
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_1_orig.jpg"), orig)
 
@@ -201,12 +202,28 @@ def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit=None, prev_rfit
         plt.savefig(os.path.join(output_files, base_filename + "_5_histogram.jpg"))
         plt.close()
 
-    left_fit, right_fit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
+    lfit, rfit = find_lane(img, histogram, left_fit=prev_lfit, right_fit=prev_rfit)
+
+    # if l_acc == None:
+    #     l_acc = collections.deque(maxlen=1)
+    # if r_acc == None:
+    #     r_acc = collections.deque(maxlen=1)
+    #
+    # l_acc.append(lfit)
+    # r_acc.append(rfit)
+    #
+    # print(np.shape(lfit))
+    # print(np.shape(r_acc))
+    # print(np.shape(np.sum(l_acc, 0)))
+    # print(l_acc)
+    # lfit = np.array(np.sum(l_acc, 0)) / len(l_acc)
+    # rfit = np.array(np.sum(r_acc, 0)) / len(r_acc)
+    # print(lfit)
 
     # Generate x and y values for plotting
     ploty = np.linspace(0, img.shape[0] - 1, img.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    left_fitx = lfit[0] * ploty ** 2 + lfit[1] * ploty + lfit[2]
+    right_fitx = rfit[0] * ploty ** 2 + rfit[1] * ploty + rfit[2]
 
     # print(np.shape(ploty))
     l_points = np.squeeze(np.array(np.dstack((left_fitx, ploty)), dtype='int32'))
@@ -248,4 +265,4 @@ def pipeline(orig, mtx, dist, src, dst, base_filename, prev_lfit=None, prev_rfit
     if debug:
         mpimg.imsave(os.path.join(output_files, base_filename + "_8_output.jpg"), out_img, cmap='gray')
 
-    return out_img, left_fit, right_fit
+    return out_img, prev_lfit, prev_rfit, l_acc, r_acc
