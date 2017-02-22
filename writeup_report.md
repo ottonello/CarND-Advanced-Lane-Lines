@@ -150,7 +150,17 @@ the `np.polyfit()` function, which takes the `y` and `x` coordinates of a set of
  a higher degree. The three resulting coefficients are then used to plot the lines.
  
  The code for the sliding window detection and polynomial regression is contained in the `find_lane` function 
- in the `pipeline.py` file(lines 98-167)
+ in the `pipeline.py` file(lines 98-167).
+
+##### Additional differential processing and averaging 
+Additionally to this, the results from the last frame are passed again into the pipeline for the next pass, so that
+the next window search begins where the line was detected the last time. This happens in lines 148 to 156 in the pipeline
+file.
+
+Also, the pipeline allows for a buffer of last fitting parameters to be passed into the function. If present, these
+ values are averaged with the current one. An additional step could be taken to give this average a weighted value
+  depending on the 'age' of the fitting parameters. The averaging function is called `average_last_frames` and can be 
+   found in lines 202 through 208 of the `pipeline.py` file.
 
 ####5. Calculating radius of curvature and lane position
 
