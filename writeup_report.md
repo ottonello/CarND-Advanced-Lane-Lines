@@ -92,7 +92,7 @@ I used the following thresholding mechanisms for the line detection:
 Convenient thresholding values for each of these mechanisms were empirically determined.
 
 An output sample looks like this:
-s
+
 ![alt text][image4]
 
 ####3. Perspective transform
