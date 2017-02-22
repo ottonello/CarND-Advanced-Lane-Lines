@@ -1,5 +1,4 @@
-##Writeup Template
-###You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
+##Writeup Report
 
 ---
 
@@ -31,7 +30,6 @@ The goals / steps of this project are the following:
 [image10]: ./output_images/test1.jpg_8_output.jpg "Output"
 [video1]: ./solution_video.mp4 "Video"
 
-## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 ###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
