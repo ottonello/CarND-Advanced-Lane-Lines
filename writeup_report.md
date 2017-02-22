@@ -26,7 +26,8 @@ The goals / steps of this project are the following:
 [image5]: ./output_images/straight_lines1_undistorted_ptransf1.jpg "Warp Example"
 [image6]: ./output_images/test1.jpg_4_perspective.jpg "Warp Example"
 [image7]: ./output_images/test1.jpg_5_histogram.jpg "Histogram"
-[image8]: ./output_images/test1.jpg_7_detected_lane.jpg "Output"
+[image8]: ./output_images/test1.jpg_windows.jpg "Detected windows"
+[image9]: ./output_images/test1.jpg_7_detected_lane.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -138,7 +139,8 @@ like the following plot:
 
 ![alt text][image7]
 
-After this, a sliding window search is performed in the left and right halves of the image.
+After this, a sliding window search is performed in the left and right halves of the image. This is done
+by progressively moving the windows towards the mean of the x-positions for all the non-zero pixel
 
 ![alt text][image8]
 
