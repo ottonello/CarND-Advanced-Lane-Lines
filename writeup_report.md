@@ -120,7 +120,7 @@ image and its warped counterpart to verify that the lines appear parallel in the
 
 ![alt text][image5]
 
-Warped sample:
+And here is a warped sample, here the objective is for the lines to be approximately parallel:
 
 ![alt text][image6]
 
