@@ -153,7 +153,7 @@ the `np.polyfit()` function, which takes the `y` and `x` coordinates of a set of
  in the `pipeline.py` file(lines 98-167).
 
 ##### Differential processing and averaging 
-Additionally to this, the results from the last frame are passed again into the pipeline for the next pass, so that
+Additionally to these detection steps, the results from the last frame are passed again into the pipeline for the next pass, so that
 the next window search begins where the line was detected the last time. This happens in lines 148 to 156 in the pipeline
 file.
 
