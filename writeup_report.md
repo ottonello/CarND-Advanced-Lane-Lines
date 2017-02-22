@@ -19,7 +19,7 @@ The goals / steps of this project are the following:
 
 [image0]: ./camera_cal/calibration1.jpg "Original chessboard"
 [image1]: ./output_images/calibrated1.jpg "Corrected chessboard"
-[image2]: ./output_images/test1_orig.jpg "Original road"
+[image2]: ./output_images/test1.jpg_1_orig.jpg "Original road"
 [image3]: ./output_images/test1.jpg_2_undistorted.jpg "Road Transformed"
 [image4]: ./output_images/test1.jpg_3_thresholded.jpg "Binary Example"
 [image5]: ./output_images/straight_lines1_undistorted_ptransf1.jpg "Warp Example"
