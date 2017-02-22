@@ -27,18 +27,14 @@ The goals / steps of this project are the following:
 [image6]: ./output_images/test1.jpg_4_perspective.jpg "Warp Example"
 [image7]: ./output_images/test1.jpg_5_histogram.jpg "Histogram"
 [image8]: ./output_images/test1.jpg_windows.jpg "Detected windows"
-[image9]: ./output_images/test1.jpg_7_detected_lane.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image9]: ./output_images/test1.jpg_7_detected_lane.jpg "Detected lane plot"
+[image10]: ./output_images/test1.jpg_8_output.jpg "Output"
+[video1]: ./solution_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 ###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
 
 ---
-###Writeup / README
-
-####1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
 ###Camera Calibration
 
 ####1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
@@ -77,7 +73,7 @@ The pipeline takes two arguments for camera distortion correction. These two arg
 - *mtx*: The camera matrix(as returned, i.e. from cv2.calibrateCamera)
 - *dist*: The camera distortion coefficient(as returned, i.e. from cv2.calibrateCamera)
 
-These two arguments are fed into the `cv2.undistort` function(lines #22-23, `pipeline.py`). This call returns the resulting,
+These two arguments are fed into the `cv2.undistort` function(lines #23-24, `pipeline.py`). This call returns the resulting,
 undistorted image:
 
 ![alt text][image3]
@@ -87,7 +83,7 @@ undistorted image:
 Gradient detection using Sobel filters, as well as a color space transformation into
  HLS is used for generating a binary thresholded image with candidate pixels for detected lines.
 
-The auxiliary functions and the combining method are located between lines 25 and 83 in `pipeline.py`.
+The auxiliary functions and the combining method are located between lines 27 and 83 in `pipeline.py`.
 
 I used the following thresholding mechanisms for the line detection:
 - Absolute value of the gradient in the x/y directions
@@ -105,7 +101,7 @@ s
 
 
 The code for my perspective transform includes a function called `perspective_transform()`, 
-which appears in lines 84 through 88 in the file `pipeline.py`.  
+which appears in lines 86 through 90 in the file `pipeline.py`.  
 The `transform()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  
 
 I found the source points in the image by eyeballing on a straight line image with the final points in the perspective
@@ -134,25 +130,52 @@ Warped sample:
 
 The first step for finding the lines was to get a histogram of the frequency of pixels in the lower half of the image.
 This is used for finding the candidate x,y points where we will assume the center of the lines will be located.
-Calculating this histogram is done in lines 91 to 93 in `pipeline.py`, and if we plot the results we will get something
+The histogram is obtained in lines 93 to 95 in `pipeline.py`, and if we plot the results we will get something
 like the following plot:
 
 ![alt text][image7]
 
 After this, a sliding window search is performed in the left and right halves of the image. This is done
-by progressively moving the windows towards the mean of the x-positions for all the non-zero pixel
+starting from the lower position, where the line is initially detected from the histogram, then
+by progressively moving upwards and repositioning the window center towards the mean of the x-positions 
+for all the non-zero pixels within the current window.
+This is how these windows look when plotted and proyected into the original image:
 
 ![alt text][image8]
 
-####5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+The positions of all pixels for each window are all added up into a single array. From all the positions of these pixels,
+which hopefully will describe approximately the positions of the lines, we can perform a polynomial fitting using 
+the `np.polyfit()` function, which takes the `y` and `x` coordinates of a set of points and returns an array
+ of coefficients for a polynomial fit of the requested degree.
+ 
+ In this case, as appropriate we use a polynomial of second degree. The curvature of the lane lines should rarely require
+ a higher degree. The three resulting coefficients are then used to plot the lines.
+ 
+ The code for the sliding window detection and polynomial regression is contained in the `find_lane` function 
+ in the `pipeline.py` file(lines 98-167)
 
-I did this in lines # through # in my code in `my_other_file.py`
+####5. Calculating radius of curvature and lane position
 
-####6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+Once the fitting parameters for the curves are found, the radius can be found from the function by using the formula as given
+in http://www.intmath.com/applications-differentiation/8-radius-curvature.php.  
+As  given, this method will return the radius in pixel units of the curve. To convert this into meters we first convert
+these parameters to the physical measurements by multiplying both x and y measurements by the ratio of meters/pixel we
+found by measuring the lane lines and taking into account the line width and an approximated value of 30m for the length
+of the considered area. These two values are constants and its calculation can be found in lines 11-13 of the `pipeline.py`
+ file. The radius calculation itself is located in the `get_curverad` function in the same file, lines 185-199.
+   
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+####6. Plotting the lane back into the image
 
-![alt text][image6]
+I implemented this step in lines 301 through 309, in my code in `pipeline.py` in the function `map_lane()`.
+This function only draws the lines into an empty image, with the results being as follows:
+
+![alt text][image9]
+
+After performing the inverse perspective transformation and overlying it on the original image (done in lines 283 and 284),
+The result looks like follows:
+
+![alt text][image10]
 
 ---
 
@@ -160,13 +183,20 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 ####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./solution_video.mp4)
+
+Alternative: [youtube](https://www.youtube.com/watch?v=ur_vsFF68kA&feature=youtu.be)
 
 ---
 
 ###Discussion
 
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+####1. Briefly discuss any problems / issues you faced in your implementation of this project. Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
-
+I think the main problem in this project is about finding the correct thresholds and combination of filtering tecniques
+ so that lines are properly detected while minimizing the amount of noise and residual borders detected.  
+The difficulty in this task is especially noticeable in road sections where there are adjacent, parallel lines to the lane,
+ like where there are road dividers which project a shadow over the pavement. In other places, there are shadows
+ that are transverse to the road lines, these shadows work add noise especially in the 'S' channel, which I found to
+ be very useful to detect the lines. There is possibly a combination of channels capable of eliminating this noise, but I was unable
+ to find one so far.

@@ -12,15 +12,17 @@ LANE_WIDTH_PX = 640
 YM_PER_PX = 30 / IMG_HEIGHT  # meters per pixel in y dimension
 XM_PER_PX = 3.7 / LANE_WIDTH_PX  # meters per pixel in x dimension
 
-WINDOW_HEIGHT = 80 # Height of sliding window used to detect line
+WINDOW_HEIGHT = 80  # Height of sliding window used to detect line
 # Set the width of the windows +/- margin
 WINDOW_MARGIN = 100
 # Set minimum number of pixels found to recenter window
 MIN_PIX_WINDOW = 50
 N_WINDOWS = int(IMG_HEIGHT / WINDOW_HEIGHT)
 
+
 def cal_undistort(img, mtx, dist):
     return cv2.undistort(img, mtx, dist, None, mtx)
+
 
 def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -76,7 +78,7 @@ def threshold(image):
     mag_binary = mag_thresh(image, sobel_kernel=9, mag_thresh=(50, 200))
     combined = np.zeros_like(dir_binary)
 
-    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh==1))] = 1
+    combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 1)) | ((s_thresh == 1))] = 1
 
     return combined
 
@@ -126,10 +128,10 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
             win_xright_high = rightx_current + WINDOW_MARGIN
             # Draw the windows on the visualization image
             # Identify the nonzero pixels in x and y within the window
-            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (
-            nonzerox < win_xleft_high)).nonzero()[0]
-            good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (
-            nonzerox < win_xright_high)).nonzero()[0]
+            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &
+                              (nonzerox < win_xleft_high)).nonzero()[0]
+            good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) &
+                               (nonzerox < win_xright_high)).nonzero()[0]
             # Append these indices to the lists
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
@@ -164,6 +166,7 @@ def find_lane(img, histogram, left_fit=None, right_fit=None):
 
     return left_fit, right_fit
 
+
 def dist_from_center(left_fitx, right_fitx):
     """
     Calculate distance in meters from center of lane,
@@ -175,8 +178,9 @@ def dist_from_center(left_fitx, right_fitx):
     # x position of left line at y = 720
     left_x = left_fitx[-1]
     right_x = right_fitx[-1]
-    center_x = left_x + ((right_x - left_x) /2)
-    return ((IMG_WIDTH/2) - center_x) * XM_PER_PX
+    center_x = left_x + ((right_x - left_x) / 2)
+    return ((IMG_WIDTH / 2) - center_x) * XM_PER_PX
+
 
 def get_curverad(ploty, left_fitx, right_fitx):
     """
@@ -188,15 +192,14 @@ def get_curverad(ploty, left_fitx, right_fitx):
     left_fit_cr = np.polyfit(ploty * YM_PER_PX, left_fitx * XM_PER_PX, 2)
     right_fit_cr = np.polyfit(ploty * YM_PER_PX, right_fitx * XM_PER_PX, 2)
     # Calculate the new radii of curvature
-    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PX + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-        2 * left_fit_cr[0])
-    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PX + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
-        2 * right_fit_cr[0])
+    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * YM_PER_PX + left_fit_cr[1]) ** 2) ** 1.5) \
+                    / np.absolute(2 * left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * YM_PER_PX + right_fit_cr[1]) ** 2) ** 1.5) \
+                     / np.absolute(2 * right_fit_cr[0])
     return (left_curverad + right_curverad) / 2
 
 
 def average_last_frames(lfit, rfit, l_acc, r_acc):
-
     if l_acc is not None and r_acc is not None:
         l_acc.append(lfit)
         r_acc.append(rfit)
